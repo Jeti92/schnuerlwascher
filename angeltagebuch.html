@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Schnürlwascher">
+  <meta name="theme-color" content="#1D9E75">
+  <title>Schnürlwascher</title>
+  <link rel="manifest" href="manifest.json">
+
+  <!-- ============================================================
+       FIREBASE KONFIGURATION
+       Ersetze die 6 Werte unten mit deinen Firebase-Zugangsdaten.
+       Anleitung: siehe ANLEITUNG.md
+  ============================================================ -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, push, onValue, remove, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey:            "AIzaSyBU39V8rIO96ZwxGZkg3jNpAliv5W-tNAA",
+      authDomain:        "schnuerlwascher-77087.firebaseapp.com",
+      databaseURL:       "https://schnuerlwascher-77087-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId:         "schnuerlwascher-77087",
+      storageBucket:     "schnuerlwascher-77087.firebasestorage.app",
+      messagingSenderId: "103623470232",
+      appId:             "1:103623470232:web:a20533e993adefe8bcb4ed"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db  = getDatabase(app);
+    window._fb = { db, ref, push, onValue, remove, set };
+    window.dispatchEvent(new Event('firebase-ready'));
+  </script>
+
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+    :root{
+      --green:#1D9E75;--green-light:#EAF3DE;--green-dark:#085041;
+      --blue:#378ADD;--blue-light:#E6F1FB;--blue-dark:#0C447C;
+      --amber:#BA7517;--amber-light:#FAEEDA;
+      --purple:#7F77DD;--purple-light:#EEEDFE;--purple-dark:#3C3489;
+      --bg:#f5f5f3;--surface:#ffffff;--border:rgba(0,0,0,0.12);
+      --text:#1a1a18;--text-muted:#6b6b67;
+      --radius:12px;--radius-sm:8px;
+    }
+    @media(prefers-color-scheme:dark){:root{
+      --bg:#1a1a18;--surface:#2a2a27;--border:rgba(255,255,255,0.12);
+      --text:#f0ede8;--text-muted:#9a9a94;
+      --green-light:#0a3020;--blue-light:#0a1f35;--amber-light:#2a1e08;--purple-light:#1a1840;
+    }}
+    html,body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);}
+    body{max-width:600px;margin:0 auto;padding-bottom:60px;}
+
+    .header{background:white;color:var(--text);padding:16px 16px 12px;display:flex;flex-direction:column;align-items:center;gap:0;position:sticky;top:0;z-index:100;border-bottom:1px solid var(--border);transition:transform 0.2s ease;}.header.hidden-up{transform:translateY(-100%);}.header-logo{width:300px;height:300px;object-fit:contain;margin-bottom:8px;}.header-vereinsname{}.header-greenline{}
+    .header-title{font-size:22px;font-weight:700;font-family:Georgia,"Times New Roman",serif;color:var(--text);text-align:center;letter-spacing:0.02em;line-height:1.1;}
+    .header-sub{font-size:11px;color:var(--text-muted);text-align:center;margin-top:4px;}
+    .avatar-btn{background:var(--green);border:none;color:white;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;position:absolute;top:14px;right:12px;border-radius:20px;padding:6px 12px;white-space:nowrap;}
+    .sync-dot{width:8px;height:8px;border-radius:50%;background:#4ade80;position:absolute;top:12px;left:14px;}
+    .sync-dot.offline{background:#f87171;}
+
+    .bottom-nav{background:var(--surface);border-top:.5px solid var(--border);display:flex;position:fixed;bottom:0;left:0;right:0;max-width:600px;margin:0 auto;z-index:100;padding-bottom:env(safe-area-inset-bottom);}
+    .nav-btn{flex:1;border:none;background:none;padding:10px 4px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--text-muted);font-size:10px;}
+    .nav-btn.active{color:var(--green);}
+    .nav-icon{font-size:20px;}
+
+    .content{padding:16px 16px 8px;}
+    .section{display:none;}.section.active{display:block;}
+
+    .form-card{background:var(--surface);border-radius:var(--radius);padding:16px;margin-bottom:12px;border:.5px solid var(--border);}
+    .form-card-title{font-size:13px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    .form-group{display:flex;flex-direction:column;gap:4px;}
+    .form-group.full{grid-column:1/-1;}
+    label{font-size:12px;color:var(--text-muted);font-weight:500;}
+    input,select,textarea{background:var(--bg);border:.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:16px;color:var(--text);width:100%;-webkit-appearance:none;appearance:none;font-family:inherit;}
+    input:focus,select:focus{outline:none;border-color:var(--green);}
+    textarea{resize:none;height:70px;}
+    .btn-primary{background:var(--green);color:white;border:none;border-radius:var(--radius-sm);padding:14px 20px;font-size:16px;font-weight:600;cursor:pointer;width:100%;margin-top:4px;font-family:inherit;}
+    .btn-primary:active{opacity:.85;}
+    .btn-sec{background:none;border:.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 16px;font-size:14px;cursor:pointer;color:var(--text);font-family:inherit;}
+
+    .photo-upload{border:1.5px dashed var(--border);border-radius:var(--radius-sm);padding:20px;text-align:center;cursor:pointer;color:var(--text-muted);font-size:14px;background:var(--bg);}
+    .photo-upload-icon{font-size:28px;display:block;margin-bottom:6px;}
+    .photo-preview{width:100%;border-radius:var(--radius-sm);margin-top:10px;display:none;max-height:220px;object-fit:cover;}
+
+    .catch-card{background:var(--surface);border-radius:var(--radius);border:.5px solid var(--border);margin-bottom:10px;overflow:hidden;}
+    .catch-card img{width:100%;max-height:200px;object-fit:cover;}
+    .catch-card-body{padding:14px;}
+    .catch-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+    .catch-name{font-size:16px;font-weight:600;}
+    .catch-meta{font-size:13px;color:var(--text-muted);margin-top:3px;line-height:1.5;}
+    .badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+    .badge{font-size:11px;padding:3px 9px;border-radius:20px;font-weight:600;}
+    .badge-green{background:var(--green-light);color:var(--green-dark);}
+    .badge-blue{background:var(--blue-light);color:var(--blue-dark);}
+    .badge-amber{background:var(--amber-light);color:var(--amber);}
+    .delete-btn{background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;padding:4px;line-height:1;}
+
+    .filter-bar{display:flex;gap:8px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px;}
+    .filter-bar select{font-size:13px;padding:7px 10px;flex-shrink:0;}
+    .result-count{font-size:13px;color:var(--text-muted);margin-bottom:10px;}
+
+    .stat-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;}
+    .stat-card{background:var(--surface);border-radius:var(--radius-sm);padding:12px;border:.5px solid var(--border);}
+    .stat-label{font-size:11px;color:var(--text-muted);margin-bottom:4px;}
+    .stat-value{font-size:18px;font-weight:600;}
+    .stat-sub{font-size:10px;color:var(--text-muted);margin-top:2px;}
+    .chart-section{background:var(--surface);border-radius:var(--radius);border:.5px solid var(--border);padding:14px;margin-bottom:12px;}
+    .chart-title{font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;}
+    .bar-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+    .bar-label{font-size:12px;color:var(--text-muted);width:90px;text-align:right;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .bar-bg{flex:1;height:22px;background:var(--bg);border-radius:4px;overflow:hidden;}
+    .bar-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:8px;min-width:28px;}
+    .bar-fill.green{background:var(--green);}.bar-fill.blue{background:var(--blue);}.bar-fill.purple{background:var(--purple);}.bar-fill.amber{background:var(--amber);}
+    .bar-count{font-size:11px;color:white;font-weight:600;}
+    .rekord-card{background:var(--surface);border-radius:var(--radius-sm);border:.5px solid var(--border);padding:12px;margin-bottom:8px;}
+
+    .empty{text-align:center;color:var(--text-muted);font-size:14px;padding:40px 20px;}
+    .empty-icon{font-size:40px;display:block;margin-bottom:10px;}
+    .loading{text-align:center;padding:40px;color:var(--text-muted);}
+    .spinner{display:inline-block;width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite;margin-bottom:10px;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+
+    #setup-screen{position:fixed;inset:0;background:var(--bg);z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;}
+    #setup-screen.hidden{display:none;}
+    .setup-icon{font-size:64px;margin-bottom:16px;}
+    .setup-title{font-size:22px;font-weight:700;margin-bottom:8px;}
+    .setup-sub{font-size:14px;color:var(--text-muted);line-height:1.6;}
+    .setup-error{background:#fcebeb;color:#a32d2d;border-radius:var(--radius-sm);padding:12px;font-size:13px;margin-top:20px;display:none;max-width:340px;}
+
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:flex-end;}
+    .modal-overlay.hidden{display:none;}
+    .modal{background:var(--surface);border-radius:var(--radius) var(--radius) 0 0;padding:20px;width:100%;padding-bottom:calc(20px + env(safe-area-inset-bottom));}
+    .modal-title{font-size:17px;font-weight:600;margin-bottom:16px;}
+    .fischer-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
+    .fischer-item{display:flex;align-items:center;gap:10px;padding:12px;border-radius:var(--radius-sm);background:var(--bg);cursor:pointer;border:.5px solid transparent;}
+    .fischer-item.selected{border-color:var(--green);background:var(--green-light);}
+    .fischer-avatar{width:36px;height:36px;border-radius:50%;background:var(--green-light);display:flex;align-items:center;justify-content:center;font-weight:600;color:var(--green-dark);font-size:15px;flex-shrink:0;}
+    .new-fischer{display:flex;gap:8px;}
+    .new-fischer input{flex:1;}
+    .divider{border-top:.5px solid var(--border);margin:12px 0;}
+
+    #pw-screen{position:fixed;inset:0;background:var(--bg);z-index:400;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;}
+    #pw-screen.hidden{display:none;}
+    .pw-logo{width:140px;height:140px;object-fit:contain;margin-bottom:16px;}
+    .pw-title{font-family:Georgia,"Times New Roman",serif;font-size:24px;font-weight:700;margin-bottom:4px;}
+    .pw-sub{font-size:12px;color:var(--text-muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:28px;}
+    .pw-input-wrap{position:relative;width:100%;max-width:280px;margin-bottom:12px;}
+    .pw-input{width:100%;padding:14px 44px 14px 16px;font-size:18px;border-radius:var(--radius-sm);border:.5px solid var(--border);background:var(--surface);color:var(--text);letter-spacing:0.1em;text-align:center;}
+    .pw-input:focus{outline:none;border-color:var(--green);}
+    .pw-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted);}
+    .pw-btn{width:100%;max-width:280px;padding:14px;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;}
+    .pw-error{color:#E24B4A;font-size:13px;margin-top:8px;min-height:18px;}
+
+    .todo-item{background:var(--surface);border-radius:var(--radius-sm);border:.5px solid var(--border);padding:12px 14px;margin-bottom:8px;display:flex;align-items:flex-start;gap:10px;}
+    .todo-check{width:22px;height:22px;border-radius:6px;border:2px solid var(--border);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;margin-top:1px;}
+    .todo-check.done{background:var(--green);border-color:var(--green);color:white;}
+    .todo-text{flex:1;font-size:14px;line-height:1.4;}
+    .todo-text.done{text-decoration:line-through;color:var(--text-muted);}
+    .todo-meta{font-size:11px;color:var(--text-muted);margin-top:2px;}
+    .todo-priority{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600;margin-left:auto;flex-shrink:0;}
+    .prio-hoch{background:#fce8e8;color:#c0392b;}
+    .prio-mittel{background:var(--amber-light);color:var(--amber);}
+    .prio-niedrig{background:var(--green-light);color:var(--green-dark);}
+    .todo-filter-row{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;}
+    .filter-chip{padding:5px 12px;border-radius:20px;font-size:12px;border:.5px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text-muted);}
+    .filter-chip.active{background:var(--green);color:white;border-color:var(--green);}
+
+    .gallery-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;margin-bottom:12px;}
+    .gallery-item{position:relative;aspect-ratio:1;overflow:hidden;cursor:pointer;background:var(--surface);border-radius:4px;}
+    .gallery-item img{width:100%;height:100%;object-fit:cover;transition:transform 0.2s;}
+    .gallery-item:active img{transform:scale(0.97);}
+    .gallery-item .gallery-badge{position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,0.55);color:white;font-size:9px;padding:2px 5px;border-radius:4px;backdrop-filter:blur(2px);}
+    .gallery-item .gallery-tag{position:absolute;top:4px;right:4px;background:rgba(29,158,117,0.85);color:white;font-size:9px;padding:2px 5px;border-radius:4px;}
+    .gallery-empty{text-align:center;color:var(--text-muted);font-size:14px;padding:40px 20px;grid-column:1/-1;}
+    .gallery-empty-icon{font-size:40px;display:block;margin-bottom:10px;}
+    .gallery-upload-btn{background:var(--green);color:white;border:none;border-radius:var(--radius-sm);padding:12px 20px;font-size:14px;font-weight:600;cursor:pointer;width:100%;margin-bottom:12px;font-family:inherit;}
+    .lightbox{position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;}
+    .lightbox.hidden{display:none;}
+    .lightbox img{max-width:100%;max-height:70vh;object-fit:contain;border-radius:8px;}
+    .lightbox-info{color:white;text-align:center;margin-top:12px;font-size:13px;opacity:0.85;}
+    .lightbox-title{font-size:16px;font-weight:600;color:white;margin-top:8px;}
+    .lightbox-close{position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.15);border:none;color:white;font-size:22px;width:40px;height:40px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+    .lightbox-delete{margin-top:14px;background:rgba(226,75,74,0.8);color:white;border:none;border-radius:8px;padding:8px 20px;font-size:13px;cursor:pointer;}
+    .gallery-filter-row{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px;}
+
+    .edit-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:300;display:flex;align-items:flex-end;}
+    .edit-modal-overlay.hidden{display:none;}
+    .edit-modal{background:var(--surface);border-radius:var(--radius) var(--radius) 0 0;padding:20px;width:100%;max-height:85vh;overflow-y:auto;padding-bottom:calc(20px + env(safe-area-inset-bottom));}
+    .edit-modal-title{font-size:17px;font-weight:600;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;}
+    .edit-close-btn{background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);padding:0 4px;}
+    .edit-btn{background:none;border:none;cursor:pointer;color:var(--blue);font-size:14px;padding:4px 6px;font-family:inherit;}
+    .edit-btn:hover{opacity:.75;}
+    .action-row{display:flex;gap:6px;align-items:center;flex-shrink:0;}
+  </style>
+</head>
+<body>
+
+<div id="pw-screen">
+  <img class="pw-logo" src="logo.jpg" alt="Logo">
+  <div class="pw-title">Schnürlwascher</div>
+  <div class="pw-sub">Angelverein · Mitgliederbereich</div>
+  <div class="pw-input-wrap">
+    <input type="password" class="pw-input" id="pw-input" placeholder="Passwort" onkeydown="if(event.key==='Enter')checkPw()">
+    <button class="pw-toggle" onclick="togglePw()">👁</button>
+  </div>
+  <button class="pw-btn" onclick="checkPw()">Anmelden</button>
+  <div class="pw-error" id="pw-error"></div>
+</div>
+
+<div id="setup-screen">
+  <img src="logo.jpg" style="width:280px;height:280px;object-fit:contain;margin-bottom:20px;filter:drop-shadow(0 4px 24px rgba(0,0,0,0.18));">
+  <div style="font-size:11px;font-weight:700;letter-spacing:0.12em;color:#1D9E75;text-transform:uppercase;margin-bottom:4px;">Angelverein</div>
+  <div class="setup-title" style="font-size:26px;margin-bottom:6px;">Schnürlwascher</div>
+  <div class="setup-sub">Verbinde mit Firebase…</div>
+  <div class="spinner" style="margin-top:20px;"></div>
+  <div class="setup-error" id="setup-error"></div>
+</div>
+
+<div class="header" id="main-header">
+  <div class="sync-dot" id="sync-dot"></div>
+  <button class="avatar-btn" id="avatar-btn" onclick="openFischerModal()">👤 <span id="avatar-name">Fischer wählen</span></button>
+  <img class="header-logo" src="logo.jpg" style="object-fit:contain;margin-bottom:8px;">
+  <div class="header-vereinsname" style="font-size:10px;font-weight:700;letter-spacing:0.16em;color:var(--green);text-transform:uppercase;margin-bottom:2px;">Angelverein</div>
+  <div class="header-title header-vereinsname">Schnürlwascher</div>
+  <div class="header-greenline" style="width:36px;height:2px;background:var(--green);border-radius:2px;margin:6px auto 0;"></div>
+  <div class="header-sub" id="header-fischer-name">Kein Fischer gewählt</div>
+</div>
+
+<div class="content">
+
+  <div class="section active" id="sec-fang">
+    <div class="form-card">
+      <div class="form-card-title">Fang eintragen</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Fischart *</label>
+          <input type="text" id="fischart" placeholder="z.B. Karpfen" list="fischarten-list">
+          <datalist id="fischarten-list">
+            <option value="Karpfen"><option value="Hecht"><option value="Zander"><option value="Barsch">
+            <option value="Schleie"><option value="Wels"><option value="Forelle"><option value="Aal">
+            <option value="Brachse"><option value="Rotauge"><option value="Rotfeder">
+          </datalist>
+        </div>
+        <div class="form-group">
+          <label>Köder</label>
+          <input type="text" id="koeder" placeholder="z.B. Boilie" list="koeder-list">
+          <datalist id="koeder-list">
+            <option value="Boilie"><option value="Wurm"><option value="Mais"><option value="Teig">
+            <option value="Spinner"><option value="Wobbler"><option value="Gummifisch"><option value="Fliege"><option value="Pellet"><option value="Brot">
+          </datalist>
+        </div>
+        <div class="form-group"><label>Länge (cm)</label><input type="number" id="laenge" placeholder="55" min="1" inputmode="numeric"></div>
+        <div class="form-group"><label>Gewicht (g)</label><input type="number" id="gewicht" placeholder="2400" min="1" inputmode="numeric"></div>
+        <div class="form-group"><label>Datum</label><input type="date" id="datum"></div>
+        <div class="form-group"><label>Uhrzeit</label><input type="time" id="uhrzeit"></div>
+        <div class="form-group">
+          <label>Zurückgesetzt?</label>
+          <select id="zurueck"><option value="ja">Ja (C&amp;R)</option><option value="nein">Nein (entnommen)</option></select>
+        </div>
+        <div class="form-group"><label>Angelplatz</label><input type="text" id="platz" placeholder="z.B. Nordsteg"></div>
+        <div class="form-group full"><label>Notiz</label><textarea id="notiz" placeholder="Wetter, Besonderheiten..."></textarea></div>
+        <div class="form-group full">
+          <label>Foto</label>
+          <div class="photo-upload" onclick="document.getElementById('foto-input').click()">
+            <span class="photo-upload-icon">📷</span>Foto aufnehmen oder auswählen
+          </div>
+          <input type="file" id="foto-input" accept="image/*" style="display:none" onchange="previewFoto(this)">
+          <img id="foto-preview" class="photo-preview" alt="Vorschau">
+          <button class="btn-sec" id="foto-remove-btn" style="display:none;margin-top:6px;" onclick="removeFoto()">Foto entfernen</button>
+        </div>
+        <div class="full"><button class="btn-primary" id="save-fang-btn" onclick="saveFang()">Fang speichern ✓</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section" id="sec-besatz">
+    <div class="form-card">
+      <div class="form-card-title">Neuer Besatz</div>
+      <div class="form-grid">
+        <div class="form-group"><label>Fischart *</label><input type="text" id="b-fischart" placeholder="z.B. Karpfen" list="fischarten-list"></div>
+        <div class="form-group"><label>Anzahl</label><input type="number" id="b-anzahl" placeholder="50" min="1" inputmode="numeric"></div>
+        <div class="form-group"><label>Ø Gewicht (kg)</label><input type="number" id="b-groesse" placeholder="1.5" min="1" inputmode="numeric"></div>
+        <div class="form-group"><label>Datum</label><input type="date" id="b-datum"></div>
+        <div class="form-group full"><label>Notiz</label><input type="text" id="b-notiz" placeholder="Lieferant, Herkunft..."></div>
+        <div class="full"><button class="btn-primary" onclick="saveBesatz()">Besatz speichern ✓</button></div>
+      </div>
+    </div>
+    <div id="besatz-liste"><div class="loading"><div class="spinner"></div><div>Lade Daten…</div></div></div>
+  </div>
+
+  <div class="section" id="sec-liste">
+    <div class="filter-bar">
+      <select id="filter-art" onchange="renderListe()"><option value="">Alle Arten</option></select>
+      <select id="filter-fischer" onchange="renderListe()"><option value="">Alle Fischer</option></select>
+      <select id="filter-monat" onchange="renderListe()">
+        <option value="">Alle Monate</option>
+        <option value="01">Jan</option><option value="02">Feb</option><option value="03">Mär</option>
+        <option value="04">Apr</option><option value="05">Mai</option><option value="06">Jun</option>
+        <option value="07">Jul</option><option value="08">Aug</option><option value="09">Sep</option>
+        <option value="10">Okt</option><option value="11">Nov</option><option value="12">Dez</option>
+      </select>
+    </div>
+    <div class="result-count" id="fang-count"></div>
+    <div id="fang-liste"><div class="loading"><div class="spinner"></div><div>Lade Fänge…</div></div></div>
+  </div>
+
+  <div class="section" id="sec-stats">
+    <div class="filter-bar">
+      <select id="stats-filter" onchange="renderStats()">
+        <option value="all">Gesamt</option><option value="year">Dieses Jahr</option><option value="month">Dieser Monat</option>
+      </select>
+      <select id="stats-fischer" onchange="renderStats()"><option value="">Alle Fischer</option></select>
+    </div>
+    <div class="stat-grid" id="stat-cards"></div>
+    <div class="chart-section"><div class="chart-title">🏆 Fischer-Rangliste</div><div id="fischer-chart"></div></div>
+    <div class="chart-section"><div class="chart-title">🐟 Nach Fischart</div><div id="art-chart"></div></div>
+    <div class="chart-section"><div class="chart-title">🪱 Beliebteste Köder</div><div id="koeder-chart"></div></div>
+    <div class="chart-section"><div class="chart-title">📅 Nach Monat</div><div id="monat-chart"></div></div>
+    <div class="chart-section"><div class="chart-title">🎖️ Rekorde</div><div id="rekorde"></div></div>
+  </div>
+
+  <div class="section" id="sec-todo">
+    <div class="form-card">
+      <div class="form-card-title">Neue Aufgabe</div>
+      <div class="form-grid">
+        <div class="form-group full"><label>Aufgabe *</label><input type="text" id="todo-text" placeholder="z.B. Netz reparieren..."></div>
+        <div class="form-group"><label>Priorität</label>
+          <select id="todo-prio">
+            <option value="mittel">Mittel</option>
+            <option value="hoch">Hoch</option>
+            <option value="niedrig">Niedrig</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Fällig am</label><input type="date" id="todo-datum"></div>
+        <div class="form-group full"><label>Notiz</label><input type="text" id="todo-notiz" placeholder="Weitere Details..."></div>
+        <div class="full"><button class="btn-primary" onclick="saveTodo()">Aufgabe speichern ✓</button></div>
+      </div>
+    </div>
+    <div class="todo-filter-row">
+      <div class="filter-chip active" onclick="setTodoFilter('alle',this)">Alle</div>
+      <div class="filter-chip" onclick="setTodoFilter('offen',this)">Offen</div>
+      <div class="filter-chip" onclick="setTodoFilter('erledigt',this)">Erledigt</div>
+      <div class="filter-chip" onclick="setTodoFilter('hoch',this)">🔴 Hoch</div>
+    </div>
+    <div id="todo-liste"><div class="loading"><div class="spinner"></div><div>Lade Aufgaben…</div></div></div>
+  </div>
+
+  <div class="section" id="sec-galerie">
+    <div class="form-card">
+      <div class="form-card-title">Foto hochladen</div>
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Titel / Beschreibung</label>
+          <input type="text" id="gal-titel" placeholder="z.B. Vereinsfest 2025, Ausflug...">
+        </div>
+        <div class="form-group full">
+          <div class="photo-upload" onclick="document.getElementById('gal-foto-input').click()">
+            <span class="photo-upload-icon">📷</span>Foto auswählen oder aufnehmen
+          </div>
+          <input type="file" id="gal-foto-input" accept="image/*" style="display:none" onchange="previewGalFoto(this)">
+          <img id="gal-foto-preview" class="photo-preview" alt="Vorschau">
+        </div>
+        <div class="full"><button class="btn-primary" onclick="saveGalFoto()">Foto speichern ✓</button></div>
+      </div>
+    </div>
+    <div class="gallery-filter-row">
+      <div class="filter-chip active" onclick="setGalFilter('alle',this)">Alle</div>
+      <div class="filter-chip" onclick="setGalFilter('faenge',this)">🐟 Fangfotos</div>
+      <div class="filter-chip" onclick="setGalFilter('galerie',this)">📸 Vereinsfotos</div>
+    </div>
+    <div class="gallery-grid" id="gallery-grid"></div>
+  </div>
+
+</div>
+
+<nav class="bottom-nav">
+  <button class="nav-btn active" onclick="showTab('fang',this)"><span class="nav-icon">➕</span>Eintragen</button>
+  <button class="nav-btn" onclick="showTab('besatz',this)"><span class="nav-icon">🐠</span>Besatz</button>
+  <button class="nav-btn" onclick="showTab('liste',this)"><span class="nav-icon">📋</span>Fänge</button>
+  <button class="nav-btn" onclick="showTab('stats',this)"><span class="nav-icon">📊</span>Statistik</button>
+  <button class="nav-btn" onclick="showTab('todo',this)"><span class="nav-icon">✅</span>To-Do</button>
+  <button class="nav-btn" onclick="showTab('galerie',this)"><span class="nav-icon">🖼️</span>Galerie</button>
+</nav>
+
+<div class="modal-overlay hidden" id="fischer-modal" onclick="closeFischerOutside(event)">
+  <div class="modal">
+    <div class="modal-title">Fischer auswählen</div>
+    <div class="fischer-list" id="fischer-list"></div>
+    <div class="divider"></div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">Neuen Fischer hinzufügen</div>
+    <div class="new-fischer">
+      <input type="text" id="new-fischer-input" placeholder="Name eingeben...">
+      <button class="btn-sec" onclick="addFischer()">Hinzufügen</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const MONTHS = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+let faenge={}, besaetze={}, alleFischer=[], currentFischer='', fotoData=null;
+
+window.addEventListener('firebase-ready', () => {
+  document.getElementById('setup-screen').classList.add('hidden');
+  currentFischer = localStorage.getItem('angelapp-fischer') || '';
+  updateFischerHeader();
+  const today = new Date();
+  document.getElementById('datum').value = today.toISOString().split('T')[0];
+  document.getElementById('b-datum').value = today.toISOString().split('T')[0];
+  document.getElementById('uhrzeit').value = today.toTimeString().slice(0,5);
+  startListeners();
+  startTodoListener();
+  startGalerieListener();
+});
+
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    if (!document.getElementById('setup-screen').classList.contains('hidden')) {
+      const e = document.getElementById('setup-error');
+      e.style.display='block';
+      e.textContent='⚠️ Firebase noch nicht konfiguriert. Bitte ersetze die Platzhalter in angeltagebuch.html mit deinen Firebase-Zugangsdaten (siehe ANLEITUNG.md).';
+      document.querySelector('#setup-screen .setup-sub').textContent='Konfiguration erforderlich.';
+    }
+  }, 5000);
+});
+
+function startListeners() {
+  const {db,ref,onValue} = window._fb;
+  onValue(ref(db,'faenge'), snap => {
+    faenge = snap.val()||{};
+    document.getElementById('sync-dot').classList.remove('offline');
+    updateFilters(); renderListe(); renderStats();
+  }, () => document.getElementById('sync-dot').classList.add('offline'));
+  onValue(ref(db,'besaetze'), snap => { besaetze=snap.val()||{}; renderBesatz(); });
+  onValue(ref(db,'fischer'), snap => {
+    alleFischer = snap.val()?Object.values(snap.val()):[];
+    if (!currentFischer) openFischerModal();
+    updateFilters(); renderFischerList();
+  });
+}
+
+function updateFischerHeader() {
+  document.getElementById('header-fischer-name').textContent = currentFischer||'Kein Fischer gewählt';
+  document.getElementById('avatar-name').textContent = currentFischer||'Fischer wählen';
+}
+function openFischerModal(){ renderFischerList(); document.getElementById('fischer-modal').classList.remove('hidden'); }
+function closeFischerModal(){ document.getElementById('fischer-modal').classList.add('hidden'); }
+function closeFischerOutside(e){ if(e.target===document.getElementById('fischer-modal')) closeFischerModal(); }
+function renderFischerList(){
+  const el=document.getElementById('fischer-list');
+  if(!alleFischer.length){el.innerHTML='<div style="color:var(--text-muted);font-size:13px;">Noch keine Fischer – füge unten einen hinzu.</div>';return;}
+  el.innerHTML=alleFischer.sort().map(n=>`
+    <div class="fischer-item ${n===currentFischer?'selected':''}" onclick="selectFischer('${n.replace(/'/g,"\\'")}')">
+      <div class="fischer-avatar">${n.charAt(0).toUpperCase()}</div>
+      <div style="flex:1;font-size:15px;font-weight:500;">${n}</div>
+      ${n===currentFischer?'<span style="color:var(--green);font-size:18px;">✓</span>':''}
+    </div>`).join('');
+}
+function selectFischer(n){ currentFischer=n; localStorage.setItem('angelapp-fischer',n); updateFischerHeader(); closeFischerModal(); }
+function addFischer(){
+  const inp=document.getElementById('new-fischer-input');
+  const n=inp.value.trim(); if(!n) return;
+  if(alleFischer.includes(n)){selectFischer(n);inp.value='';return;}
+  window._fb.push(window._fb.ref(window._fb.db,'fischer'),n);
+  inp.value=''; selectFischer(n);
+}
+
+function previewFoto(input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const img=new Image();
+    img.onload=()=>{
+      const canvas=document.createElement('canvas');
+      const max=1000; let w=img.width,h=img.height;
+      if(w>max||h>max){if(w>h){h=Math.round(h*max/w);w=max;}else{w=Math.round(w*max/h);h=max;}}
+      canvas.width=w;canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      fotoData=canvas.toDataURL('image/jpeg',0.7);
+      const prev=document.getElementById('foto-preview');
+      prev.src=fotoData;prev.style.display='block';
+      document.getElementById('foto-remove-btn').style.display='block';
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function removeFoto(){
+  fotoData=null;
+  document.getElementById('foto-preview').style.display='none';
+  document.getElementById('foto-preview').src='';
+  document.getElementById('foto-remove-btn').style.display='none';
+  document.getElementById('foto-input').value='';
+}
+
+function saveFang(){
+  const art=document.getElementById('fischart').value.trim();
+  if(!art){alert('Bitte Fischart eingeben');return;}
+  if(!currentFischer){alert('Bitte zuerst einen Fischer auswählen');openFischerModal();return;}
+  window._fb.push(window._fb.ref(window._fb.db,'faenge'),{
+    fischer:currentFischer, art,
+    koeder:document.getElementById('koeder').value.trim(),
+    laenge:parseInt(document.getElementById('laenge').value)||null,
+    gewicht:parseInt(document.getElementById('gewicht').value)||null,
+    datum:document.getElementById('datum').value,
+    uhrzeit:document.getElementById('uhrzeit').value,
+    zurueck:document.getElementById('zurueck').value,
+    platz:document.getElementById('platz').value.trim(),
+    notiz:document.getElementById('notiz').value.trim(),
+    foto:fotoData, ts:Date.now()
+  });
+  ['fischart','koeder','laenge','gewicht','notiz','platz'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('notiz').value='';
+  removeFoto();
+  const btn=document.getElementById('save-fang-btn');
+  btn.textContent='✓ Gespeichert!';btn.style.background='#085041';
+  setTimeout(()=>{btn.textContent='Fang speichern ✓';btn.style.background='';},2000);
+}
+
+function saveBesatz(){
+  const art=document.getElementById('b-fischart').value.trim();
+  if(!art){alert('Bitte Fischart eingeben');return;}
+  window._fb.push(window._fb.ref(window._fb.db,'besaetze'),{
+    art,
+    anzahl:parseInt(document.getElementById('b-anzahl').value)||null,
+    groesse:parseInt(document.getElementById('b-groesse').value)||null,
+    datum:document.getElementById('b-datum').value,
+    notiz:document.getElementById('b-notiz').value.trim(),
+    ts:Date.now()
+  });
+  ['b-fischart','b-anzahl','b-groesse','b-notiz'].forEach(id=>document.getElementById(id).value='');
+}
+
+function deleteFang(key){ if(!confirm('Diesen Fang löschen?'))return; window._fb.remove(window._fb.ref(window._fb.db,'faenge/'+key)); }
+function deleteBesatz(key){ if(!confirm('Diesen Besatz löschen?'))return; window._fb.remove(window._fb.ref(window._fb.db,'besaetze/'+key)); }
+
+function getFArr(){ return Object.entries(faenge).map(([k,v])=>({...v,_key:k})).sort((a,b)=>(b.datum+b.uhrzeit).localeCompare(a.datum+a.uhrzeit)); }
+function getBArr(){ return Object.entries(besaetze).map(([k,v])=>({...v,_key:k})).sort((a,b)=>b.datum.localeCompare(a.datum)); }
+
+function updateFilters(){
+  const arr=getFArr();
+  const arten=[...new Set(arr.map(f=>f.art))].sort();
+  const fischer=[...new Set(arr.map(f=>f.fischer).filter(Boolean))].sort();
+  ['filter-art','filter-fischer','stats-fischer'].forEach(id=>{
+    const sel=document.getElementById(id),v=sel.value,isArt=id==='filter-art';
+    sel.innerHTML=`<option value="">Alle ${isArt?'Arten':'Fischer'}</option>`+(isArt?arten:fischer).map(x=>`<option value="${x}" ${x===v?'selected':''}>${x}</option>`).join('');
+  });
+}
+
+function renderListe(){
+  const art=document.getElementById('filter-art').value;
+  const fisch=document.getElementById('filter-fischer').value;
+  const monat=document.getElementById('filter-monat').value;
+  const filtered=getFArr().filter(f=>{
+    if(art&&f.art!==art)return false;
+    if(fisch&&f.fischer!==fisch)return false;
+    if(monat&&f.datum&&f.datum.slice(5,7)!==monat)return false;
+    return true;
+  });
+  document.getElementById('fang-count').textContent=filtered.length+' Einträge';
+  const el=document.getElementById('fang-liste');
+  if(!filtered.length){el.innerHTML='<div class="empty"><span class="empty-icon">🎣</span>Keine Einträge gefunden</div>';return;}
+  const gStr=g=>g>=1000?(g/1000).toFixed(2)+'kg':g+'g';
+  el.innerHTML=filtered.map(f=>{
+    const d=f.datum?new Date(f.datum).toLocaleDateString('de-DE'):'–';
+    const meta=[f.laenge?f.laenge+'cm':null,f.gewicht?gStr(f.gewicht):null].filter(Boolean).join(' · ');
+    return `<div class="catch-card">
+      ${f.foto?`<img src="${f.foto}" alt="Fangfoto" loading="lazy">`:''}
+      <div class="catch-card-body">
+        <div class="catch-top">
+          <div>
+            <div class="catch-name">${f.art}</div>
+            <div class="catch-meta">${meta||'–'} · ${d}${f.uhrzeit?' '+f.uhrzeit:''}</div>
+            ${f.fischer?`<div class="catch-meta">Fischer: <strong>${f.fischer}</strong></div>`:''}
+            ${f.koeder?`<div class="catch-meta">Köder: ${f.koeder}</div>`:''}
+            ${f.platz?`<div class="catch-meta">Platz: ${f.platz}</div>`:''}
+            ${f.notiz?`<div class="catch-meta" style="font-style:italic;">${f.notiz}</div>`:''}
+          </div>
+          <div class="action-row">
+            <button class="edit-btn" onclick="openEditFang('${f._key}')">✏️</button>
+            <button class="delete-btn" onclick="deleteFang('${f._key}')">🗑</button>
+          </div>
+        </div>
+        <div class="badges"><span class="badge ${f.zurueck==='ja'?'badge-blue':'badge-amber'}">${f.zurueck==='ja'?'C&R':'entnommen'}</span></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderBesatz(){
+  const el=document.getElementById('besatz-liste'),arr=getBArr();
+  if(!arr.length){el.innerHTML='<div class="empty"><span class="empty-icon">🐠</span>Noch kein Besatz eingetragen</div>';return;}
+  el.innerHTML=arr.map(b=>{
+    const d=b.datum?new Date(b.datum).toLocaleDateString('de-DE'):'–';
+    const meta=[b.anzahl?b.anzahl+' Stück':null,b.groesse?'Ø '+b.groesse+'kg':null].filter(Boolean).join(' · ');
+    return `<div class="catch-card"><div class="catch-card-body">
+      <div class="catch-top">
+        <div><div class="catch-name">${b.art}</div><div class="catch-meta">${meta||'–'} · ${d}</div>${b.notiz?`<div class="catch-meta">${b.notiz}</div>`:''}</div>
+        <div style="display:flex;gap:6px;align-items:center;"><span class="badge badge-green">Besatz</span><button class="edit-btn" onclick="openEditBesatz('${b._key}')">✏️</button><button class="delete-btn" onclick="deleteBesatz('${b._key}')">🗑</button></div>
+      </div>
+    </div></div>`;
+  }).join('');
+}
+
+function getStatsData(){
+  const f=document.getElementById('stats-filter').value;
+  const fisch=document.getElementById('stats-fischer').value;
+  const now=new Date();
+  return getFArr().filter(x=>{
+    if(fisch&&x.fischer!==fisch)return false;
+    if(!x.datum)return f==='all';
+    const d=new Date(x.datum);
+    if(f==='year')return d.getFullYear()===now.getFullYear();
+    if(f==='month')return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();
+    return true;
+  });
+}
+
+function makeBar(el,entries,cls){
+  if(!entries.length){el.innerHTML='<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:10px;">Keine Daten</div>';return;}
+  const max=Math.max(...entries.map(e=>e[1]));
+  el.innerHTML=entries.slice(0,10).map(([l,c])=>`<div class="bar-row"><div class="bar-label" title="${l}">${l}</div><div class="bar-bg"><div class="bar-fill ${cls}" style="width:${Math.round(c/max*100)}%"><span class="bar-count">${c}</span></div></div></div>`).join('');
+}
+
+function renderStats(){
+  const data=getStatsData(),mitG=data.filter(f=>f.gewicht),total=data.length;
+  const avgG=mitG.length?Math.round(mitG.reduce((s,f)=>s+f.gewicht,0)/mitG.length):0;
+  const maxG=mitG.length?Math.max(...mitG.map(f=>f.gewicht)):0;
+  const crCount=data.filter(f=>f.zurueck==='ja').length;
+  const gStr=g=>g>=1000?(g/1000).toFixed(2)+'kg':g?g+'g':'–';
+  document.getElementById('stat-cards').innerHTML=`
+    <div class="stat-card"><div class="stat-label">Fänge</div><div class="stat-value">${total}</div></div>
+    <div class="stat-card"><div class="stat-label">Ø Gewicht</div><div class="stat-value">${gStr(avgG)}</div></div>
+    <div class="stat-card"><div class="stat-label">Rekord</div><div class="stat-value">${gStr(maxG)}</div></div>
+    <div class="stat-card"><div class="stat-label">C&R Quote</div><div class="stat-value">${total?Math.round(crCount/total*100):0}%</div><div class="stat-sub">${crCount}/${total}</div></div>
+    <div class="stat-card"><div class="stat-label">Arten</div><div class="stat-value">${new Set(data.map(f=>f.art)).size}</div></div>
+    <div class="stat-card"><div class="stat-label">Fischer</div><div class="stat-value">${new Set(data.map(f=>f.fischer).filter(Boolean)).size}</div></div>
+  `;
+  const cm=arr=>arr.reduce((m,k)=>{m[k]=(m[k]||0)+1;return m;},{});
+  const te=m=>Object.entries(m).sort((a,b)=>b[1]-a[1]);
+  const fMap=cm(data.filter(f=>f.fischer).map(f=>f.fischer));
+  const fEnt=te(fMap);
+  const fEl=document.getElementById('fischer-chart');
+  if(!fEnt.length){fEl.innerHTML='<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:10px;">Keine Daten</div>';}
+  else{const mx=fEnt[0][1];fEl.innerHTML=fEnt.map(([n,c],i)=>{const m=i===0?'🥇':i===1?'🥈':i===2?'🥉':'';return`<div class="bar-row"><div class="bar-label" title="${n}">${m} ${n}</div><div class="bar-bg"><div class="bar-fill purple" style="width:${Math.round(c/mx*100)}%"><span class="bar-count">${c}</span></div></div></div>`;}).join('');}
+  makeBar(document.getElementById('art-chart'),te(cm(data.map(f=>f.art))),'blue');
+  makeBar(document.getElementById('koeder-chart'),te(cm(data.filter(f=>f.koeder).map(f=>f.koeder))),'green');
+  makeBar(document.getElementById('monat-chart'),
+    te(data.filter(f=>f.datum).reduce((m,f)=>{const k=f.datum.slice(5,7);m[k]=(m[k]||0)+1;return m;},{}))
+    .sort((a,b)=>a[0].localeCompare(b[0])).map(([m,c])=>[MONTHS[parseInt(m)-1],c]),'amber');
+  const maxGF=mitG.length?mitG.reduce((b,f)=>f.gewicht>b.gewicht?f:b):null;
+  const mitL=data.filter(f=>f.laenge),maxLF=mitL.length?mitL.reduce((b,f)=>f.laenge>b.laenge?f:b):null;
+  document.getElementById('rekorde').innerHTML=[
+    maxGF?`<div class="rekord-card"><div style="font-weight:600;font-size:14px;">⚖️ Schwerster: ${gStr(maxGF.gewicht)}</div><div style="font-size:12px;color:var(--text-muted);margin-top:3px;">${maxGF.art} · ${maxGF.fischer||'–'} · ${maxGF.datum?new Date(maxGF.datum).toLocaleDateString('de-DE'):'–'}</div></div>`:'',
+    maxLF?`<div class="rekord-card"><div style="font-weight:600;font-size:14px;">📏 Längster: ${maxLF.laenge} cm</div><div style="font-size:12px;color:var(--text-muted);margin-top:3px;">${maxLF.art} · ${maxLF.fischer||'–'} · ${maxLF.datum?new Date(maxLF.datum).toLocaleDateString('de-DE'):'–'}</div></div>`:''
+  ].join('')||'<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:10px;">Noch keine Rekorde</div>';
+}
+
+function showTab(id,btn){
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('sec-'+id).classList.add('active');
+  if(id==='stats'){updateFilters();renderStats();}
+  if(id==='todo'){renderTodos();}
+  if(id==='galerie'){renderGalerie();}
+  if(id==='liste'){updateFilters();renderListe();}
+  window.scrollTo(0,0);
+}
+
+
+// ─── PASSWORT ────────────────────────────────────────────
+const APP_PW = 'schnuerlwascher'; // Passwort hier ändern
+function checkPw() {
+  const val = document.getElementById('pw-input').value;
+  if (val.toLowerCase() === APP_PW.toLowerCase()) {
+    localStorage.setItem('angelapp-auth', '1');
+    document.getElementById('pw-screen').classList.add('hidden');
+  } else {
+    const err = document.getElementById('pw-error');
+    err.textContent = 'Falsches Passwort – bitte nochmal versuchen.';
+    document.getElementById('pw-input').value = '';
+    setTimeout(() => err.textContent = '', 3000);
+  }
+}
+function togglePw() {
+  const inp = document.getElementById('pw-input');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+function initPwCheck() {
+  if (localStorage.getItem('angelapp-auth') === '1') {
+    document.getElementById('pw-screen').classList.add('hidden');
+  }
+  // else pw-screen stays visible
+}
+initPwCheck();
+
+// ─── TODO ────────────────────────────────────────────────
+let todos = {}, todoFilter = 'alle';
+
+function startTodoListener() {
+  const {db, ref, onValue} = window._fb;
+  onValue(ref(db, 'todos'), snap => {
+    todos = snap.val() || {};
+    renderTodos();
+  });
+}
+
+function saveTodo() {
+  const text = document.getElementById('todo-text').value.trim();
+  if (!text) { alert('Bitte Aufgabe eingeben'); return; }
+  window._fb.push(window._fb.ref(window._fb.db, 'todos'), {
+    text,
+    prio: document.getElementById('todo-prio').value,
+    datum: document.getElementById('todo-datum').value,
+    notiz: document.getElementById('todo-notiz').value.trim(),
+    done: false,
+    ersteller: currentFischer || '–',
+    ts: Date.now()
+  });
+  ['todo-text','todo-datum','todo-notiz'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('todo-prio').value = 'mittel';
+}
+
+function toggleTodo(key) {
+  const todo = todos[key];
+  if (!todo) return;
+  window._fb.set(window._fb.ref(window._fb.db, 'todos/' + key + '/done'), !todo.done);
+}
+
+function deleteTodo(key) {
+  if (!confirm('Aufgabe löschen?')) return;
+  window._fb.remove(window._fb.ref(window._fb.db, 'todos/' + key));
+}
+
+function setTodoFilter(f, el) {
+  todoFilter = f;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderTodos();
+}
+
+function renderTodos() {
+  const arr = Object.entries(todos)
+    .map(([k,v]) => ({...v, _key:k}))
+    .sort((a,b) => {
+      if (a.done !== b.done) return a.done ? 1 : -1;
+      const p = {hoch:0,mittel:1,niedrig:2};
+      return (p[a.prio]||1) - (p[b.prio]||1);
+    });
+  const filtered = arr.filter(t => {
+    if (todoFilter === 'offen') return !t.done;
+    if (todoFilter === 'erledigt') return t.done;
+    if (todoFilter === 'hoch') return t.prio === 'hoch' && !t.done;
+    return true;
+  });
+  const el = document.getElementById('todo-liste');
+  if (!filtered.length) {
+    el.innerHTML = '<div class="empty"><span class="empty-icon">✅</span>Keine Aufgaben gefunden</div>';
+    return;
+  }
+  el.innerHTML = filtered.map(t => {
+    const d = t.datum ? new Date(t.datum).toLocaleDateString('de-DE') : null;
+    const prioLabel = {hoch:'🔴 Hoch', mittel:'🟡 Mittel', niedrig:'🟢 Niedrig'}[t.prio] || '';
+    const prioClass = {hoch:'prio-hoch', mittel:'prio-mittel', niedrig:'prio-niedrig'}[t.prio] || '';
+    const overdue = t.datum && !t.done && new Date(t.datum) < new Date();
+    return `<div class="todo-item">
+      <div class="todo-check ${t.done?'done':''}" onclick="toggleTodo('${t._key}')">${t.done?'✓':''}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="todo-text ${t.done?'done':''}">${t.text}</div>
+        <div class="todo-meta">
+          ${d ? `<span style="${overdue?'color:#E24B4A;font-weight:600;':''}">📅 ${d}${overdue?' · Überfällig':''}</span> · ` : ''}
+          ${t.ersteller ? t.ersteller : ''}
+          ${t.notiz ? ' · ' + t.notiz : ''}
+        </div>
+      </div>
+      <span class="todo-priority ${prioClass}">${prioLabel}</span>
+      <button class="edit-btn" onclick="openEditTodo('${t._key}')">✏️</button>
+      <button class="delete-btn" onclick="deleteTodo('${t._key}')">🗑</button>
+    </div>`;
+  }).join('');
+}
+
+
+// ─── GALERIE ─────────────────────────────────────────────
+let galItems = {}, galFilter = 'alle', galFotoData = null, lightboxKey = null, lightboxType = null;
+
+function startGalerieListener() {
+  const {db, ref, onValue} = window._fb;
+  onValue(ref(db, 'galerie'), snap => {
+    galItems = snap.val() || {};
+    renderGalerie();
+  });
+}
+
+function previewGalFoto(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const max = 1200; let w = img.width, h = img.height;
+      if (w > max || h > max) { if(w>h){h=Math.round(h*max/w);w=max;}else{w=Math.round(w*max/h);h=max;} }
+      canvas.width=w; canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      galFotoData = canvas.toDataURL('image/jpeg', 0.75);
+      const prev = document.getElementById('gal-foto-preview');
+      prev.src = galFotoData; prev.style.display = 'block';
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function saveGalFoto() {
+  if (!galFotoData) { alert('Bitte zuerst ein Foto auswählen'); return; }
+  window._fb.push(window._fb.ref(window._fb.db, 'galerie'), {
+    foto: galFotoData,
+    titel: document.getElementById('gal-titel').value.trim() || 'Vereinsfoto',
+    fischer: currentFischer || '–',
+    datum: new Date().toISOString().split('T')[0],
+    type: 'galerie',
+    ts: Date.now()
+  });
+  document.getElementById('gal-titel').value = '';
+  document.getElementById('gal-foto-preview').style.display = 'none';
+  document.getElementById('gal-foto-input').value = '';
+  galFotoData = null;
+}
+
+function setGalFilter(f, el) {
+  galFilter = f;
+  document.querySelectorAll('#sec-galerie .filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderGalerie();
+}
+
+function getAllGalItems() {
+  // Combine galerie uploads + fang photos
+  const items = [];
+  Object.entries(galItems).forEach(([k,v]) => items.push({...v, _key:k, _type:'galerie'}));
+  Object.entries(faenge).forEach(([k,v]) => {
+    if (v.foto) items.push({
+      foto: v.foto, titel: v.art || 'Fangfoto',
+      fischer: v.fischer || '–', datum: v.datum,
+      type: 'fang', _key: k, _type:'fang',
+      gewicht: v.gewicht, laenge: v.laenge
+    });
+  });
+  return items.sort((a,b) => (b.ts||0) - (a.ts||0) || (b.datum||'').localeCompare(a.datum||''));
+}
+
+function renderGalerie() {
+  const all = getAllGalItems().filter(i => {
+    if (galFilter === 'faenge') return i.type === 'fang';
+    if (galFilter === 'galerie') return i.type === 'galerie';
+    return true;
+  });
+  const el = document.getElementById('gallery-grid');
+  if (!all.length) {
+    el.innerHTML = '<div class="gallery-empty"><span class="gallery-empty-icon">📷</span>Noch keine Fotos</div>';
+    return;
+  }
+  const gStr = g => g >= 1000 ? (g/1000).toFixed(2)+'kg' : g+'g';
+  el.innerHTML = all.map(item => {
+    const badge = item.type === 'fang'
+      ? [item.laenge ? item.laenge+'cm' : null, item.gewicht ? gStr(item.gewicht) : null].filter(Boolean).join(' · ')
+      : item.fischer;
+    return `<div class="gallery-item" onclick="openLightbox('${item._key}','${item._type}')">
+      <img src="${item.foto}" alt="${item.titel}" loading="lazy">
+      ${badge ? `<div class="gallery-badge">${badge}</div>` : ''}
+      <div class="gallery-tag">${item.type === 'fang' ? '🐟' : '📸'}</div>
+    </div>`;
+  }).join('');
+}
+
+let lightboxItems = [], lightboxIndex = 0;
+let lbTouchStartX = 0;
+
+function getAllGalItemsSorted() {
+  return getAllGalItems().filter(i => {
+    if (galFilter === 'faenge') return i.type === 'fang';
+    if (galFilter === 'galerie') return i.type === 'galerie';
+    return true;
+  });
+}
+
+function openLightbox(key, type) {
+  lightboxItems = getAllGalItemsSorted();
+  lightboxIndex = lightboxItems.findIndex(i => i._key === key && i._type === type);
+  if (lightboxIndex === -1) lightboxIndex = 0;
+  showLightboxItem();
+  // Swipe support
+  const lb = document.getElementById('lightbox');
+  lb.addEventListener('touchstart', lbTouchStart, {passive:true});
+  lb.addEventListener('touchend', lbTouchEnd, {passive:true});
+  lb.classList.remove('hidden');
+}
+
+function showLightboxItem() {
+  const item = lightboxItems[lightboxIndex];
+  if (!item) return;
+  document.getElementById('lightbox-img').src = item.foto;
+  document.getElementById('lightbox-title').textContent = item.titel || item.art || 'Foto';
+  const d = item.datum ? new Date(item.datum).toLocaleDateString('de-DE') : '';
+  const gStr = g => g >= 1000 ? (g/1000).toFixed(2)+'kg' : g+'g';
+  const extra = item.type==='fang' ? [item.laenge?item.laenge+'cm':null, item.gewicht?gStr(item.gewicht):null].filter(Boolean).join(' · ') : '';
+  document.getElementById('lightbox-info').textContent = [item.fischer, d, extra].filter(Boolean).join(' · ');
+  document.getElementById('lightbox-counter').textContent = (lightboxIndex+1) + ' / ' + lightboxItems.length;
+  document.getElementById('lightbox-delete').style.display = item._type === 'galerie' ? 'block' : 'none';
+  document.getElementById('lb-prev').style.opacity = lightboxIndex === 0 ? '0.3' : '1';
+  document.getElementById('lb-next').style.opacity = lightboxIndex === lightboxItems.length-1 ? '0.3' : '1';
+}
+
+function lightboxNav(dir) {
+  const newIdx = lightboxIndex + dir;
+  if (newIdx < 0 || newIdx >= lightboxItems.length) return;
+  lightboxIndex = newIdx;
+  showLightboxItem();
+}
+
+function lbTouchStart(e) { lbTouchStartX = e.changedTouches[0].screenX; }
+function lbTouchEnd(e) {
+  const dx = e.changedTouches[0].screenX - lbTouchStartX;
+  if (Math.abs(dx) > 50) lightboxNav(dx < 0 ? 1 : -1);
+}
+
+function closeLightboxBtn() {
+  const lb = document.getElementById('lightbox');
+  lb.classList.add('hidden');
+  lb.removeEventListener('touchstart', lbTouchStart);
+  lb.removeEventListener('touchend', lbTouchEnd);
+  document.getElementById('lightbox-img').src = '';
+  lightboxKey = null; lightboxType = null;
+}
+function deleteLightboxItem() {
+  const item = lightboxItems[lightboxIndex];
+  if (!item || item._type !== 'galerie') return;
+  if (!confirm('Foto löschen?')) return;
+  window._fb.remove(window._fb.ref(window._fb.db, 'galerie/' + item._key));
+  closeLightboxBtn();
+}
+
+
+// ─── BEARBEITEN ──────────────────────────────────────────
+let editKey = null, editType = null;
+
+function closeEditModal() { document.getElementById('edit-modal').classList.add('hidden'); editKey=null; editType=null; }
+function closeEditModalOutside(e) { if(e.target===document.getElementById('edit-modal')) closeEditModal(); }
+
+function openEditFang(key) {
+  const f = faenge[key]; if(!f) return;
+  editKey=key; editType='fang';
+  document.getElementById('edit-modal-title-text').textContent = 'Fang bearbeiten';
+  const gStr = g => g||'';
+  document.getElementById('edit-modal-body').innerHTML = `
+    <div class="form-grid">
+      <div class="form-group"><label>Fischart</label><input type="text" id="e-fischart" value="${f.art||''}" list="fischarten-list"></div>
+      <div class="form-group"><label>Köder</label><input type="text" id="e-koeder" value="${f.koeder||''}" list="koeder-list"></div>
+      <div class="form-group"><label>Länge (cm)</label><input type="number" id="e-laenge" value="${f.laenge||''}" inputmode="numeric"></div>
+      <div class="form-group"><label>Gewicht (g)</label><input type="number" id="e-gewicht" value="${f.gewicht||''}" inputmode="numeric"></div>
+      <div class="form-group"><label>Datum</label><input type="date" id="e-datum" value="${f.datum||''}"></div>
+      <div class="form-group"><label>Uhrzeit</label><input type="time" id="e-uhrzeit" value="${f.uhrzeit||''}"></div>
+      <div class="form-group"><label>Zurückgesetzt?</label>
+        <select id="e-zurueck">
+          <option value="ja" ${f.zurueck==='ja'?'selected':''}>Ja (C&R)</option>
+          <option value="nein" ${f.zurueck==='nein'?'selected':''}>Nein (entnommen)</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Angelplatz</label><input type="text" id="e-platz" value="${f.platz||''}"></div>
+      <div class="form-group full"><label>Notiz</label><textarea id="e-notiz" style="height:60px;">${f.notiz||''}</textarea></div>
+    </div>`;
+  document.getElementById('edit-modal').classList.remove('hidden');
+}
+
+function openEditBesatz(key) {
+  const b = besaetze[key]; if(!b) return;
+  editKey=key; editType='besatz';
+  document.getElementById('edit-modal-title-text').textContent = 'Besatz bearbeiten';
+  document.getElementById('edit-modal-body').innerHTML = `
+    <div class="form-grid">
+      <div class="form-group"><label>Fischart</label><input type="text" id="e-b-fischart" value="${b.art||''}" list="fischarten-list"></div>
+      <div class="form-group"><label>Anzahl</label><input type="number" id="e-b-anzahl" value="${b.anzahl||''}" inputmode="numeric"></div>
+      <div class="form-group"><label>Ø Gewicht (kg)</label><input type="number" id="e-b-groesse" value="${b.groesse||''}" step="0.1" inputmode="decimal"></div>
+      <div class="form-group"><label>Datum</label><input type="date" id="e-b-datum" value="${b.datum||''}"></div>
+      <div class="form-group full"><label>Notiz</label><input type="text" id="e-b-notiz" value="${b.notiz||''}"></div>
+    </div>`;
+  document.getElementById('edit-modal').classList.remove('hidden');
+}
+
+function openEditTodo(key) {
+  const t = todos[key]; if(!t) return;
+  editKey=key; editType='todo';
+  document.getElementById('edit-modal-title-text').textContent = 'Aufgabe bearbeiten';
+  document.getElementById('edit-modal-body').innerHTML = `
+    <div class="form-grid">
+      <div class="form-group full"><label>Aufgabe</label><input type="text" id="e-todo-text" value="${t.text||''}"></div>
+      <div class="form-group"><label>Priorität</label>
+        <select id="e-todo-prio">
+          <option value="hoch" ${t.prio==='hoch'?'selected':''}>Hoch</option>
+          <option value="mittel" ${t.prio==='mittel'?'selected':''}>Mittel</option>
+          <option value="niedrig" ${t.prio==='niedrig'?'selected':''}>Niedrig</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Fällig am</label><input type="date" id="e-todo-datum" value="${t.datum||''}"></div>
+      <div class="form-group full"><label>Notiz</label><input type="text" id="e-todo-notiz" value="${t.notiz||''}"></div>
+    </div>`;
+  document.getElementById('edit-modal').classList.remove('hidden');
+}
+
+function saveEdit() {
+  const {db, ref, set} = window._fb;
+  if (editType === 'fang') {
+    const f = faenge[editKey];
+    set(ref(db, 'faenge/' + editKey), {
+      ...f,
+      art: document.getElementById('e-fischart').value.trim(),
+      koeder: document.getElementById('e-koeder').value.trim(),
+      laenge: parseInt(document.getElementById('e-laenge').value)||null,
+      gewicht: parseInt(document.getElementById('e-gewicht').value)||null,
+      datum: document.getElementById('e-datum').value,
+      uhrzeit: document.getElementById('e-uhrzeit').value,
+      zurueck: document.getElementById('e-zurueck').value,
+      platz: document.getElementById('e-platz').value.trim(),
+      notiz: document.getElementById('e-notiz').value.trim(),
+    });
+  } else if (editType === 'besatz') {
+    const b = besaetze[editKey];
+    set(ref(db, 'besaetze/' + editKey), {
+      ...b,
+      art: document.getElementById('e-b-fischart').value.trim(),
+      anzahl: parseInt(document.getElementById('e-b-anzahl').value)||null,
+      groesse: parseFloat(document.getElementById('e-b-groesse').value)||null,
+      datum: document.getElementById('e-b-datum').value,
+      notiz: document.getElementById('e-b-notiz').value.trim(),
+    });
+  } else if (editType === 'todo') {
+    const t = todos[editKey];
+    set(ref(db, 'todos/' + editKey), {
+      ...t,
+      text: document.getElementById('e-todo-text').value.trim(),
+      prio: document.getElementById('e-todo-prio').value,
+      datum: document.getElementById('e-todo-datum').value,
+      notiz: document.getElementById('e-todo-notiz').value.trim(),
+    });
+  }
+  closeEditModal();
+}
+
+
+
+
+// ─── SLIDE HEADER ON SCROLL ──────────────────────────────
+(function() {
+  let lastY = 0;
+  window.addEventListener('scroll', function() {
+    const header = document.getElementById('main-header');
+    if (!header) return;
+    const y = window.scrollY;
+    if (y <= 0) {
+      header.classList.remove('hidden-up');
+    } else if (y < lastY) {
+      header.classList.remove('hidden-up');
+    } else if (y > lastY && y > header.offsetHeight) {
+      header.classList.add('hidden-up');
+    }
+    lastY = y;
+  }, {passive: true});
+})();
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+
+<div class="lightbox hidden" id="lightbox">
+  <button class="lightbox-close" onclick="closeLightboxBtn()">✕</button>
+  <div class="lightbox-img-wrap">
+    <button class="lightbox-nav prev" id="lb-prev" onclick="lightboxNav(-1)">‹</button>
+    <img id="lightbox-img" src="" alt="">
+    <button class="lightbox-nav next" id="lb-next" onclick="lightboxNav(1)">›</button>
+  </div>
+  <div class="lightbox-counter" id="lightbox-counter"></div>
+  <div class="lightbox-title" id="lightbox-title"></div>
+  <div class="lightbox-info" id="lightbox-info"></div>
+  <button class="lightbox-delete" id="lightbox-delete" onclick="deleteLightboxItem()">🗑 Löschen</button>
+</div>
+
+<div class="edit-modal-overlay hidden" id="edit-modal" onclick="closeEditModalOutside(event)">
+  <div class="edit-modal">
+    <div class="edit-modal-title">
+      <span id="edit-modal-title-text">Eintrag bearbeiten</span>
+      <button class="edit-close-btn" onclick="closeEditModal()">✕</button>
+    </div>
+    <div id="edit-modal-body"></div>
+    <button class="btn-primary" style="margin-top:12px;" onclick="saveEdit()">Änderungen speichern ✓</button>
+  </div>
+</div>
+</body>
+</html>
